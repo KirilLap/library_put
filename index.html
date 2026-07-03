@@ -29,8 +29,12 @@
     background:var(--paper); color:var(--ink);
     font-family:var(--font-body);
     overscroll-behavior:none;
+    overflow:hidden;
   }
-  body{ display:flex; flex-direction:column; }
+  body{
+    display:flex; flex-direction:column;
+    position:fixed; inset:0; width:100%; height:100%;
+  }
 
   /* ---------- Шапка в стиле чертёжного штампа ---------- */
   header{
@@ -81,11 +85,17 @@
   #map-view{ flex:1; position:relative; min-height:0; display:none; }
   #map-view.active{ display:flex; }
   .map-canvas{
-    flex:0 0 92%;
+    flex:1 1 auto;
     max-width:1200px;
     margin:0 auto;
-    height: calc(100% - 40px);
-    padding:50px;
+    min-height:0;
+    height:100%;
+    padding:24px;
+    touch-action:none;
+    -ms-touch-action:none;
+  }
+  @media (max-width: 760px){
+    .map-canvas{ padding:14px; }
   }
   .map-canvas.dragging{ cursor:grabbing; }
   .map-canvas, .map-canvas *, .map-transform, .map-transform *{
@@ -235,7 +245,7 @@
     <div class="map-canvas" id="map-canvas">
       <div class="map-transform" id="map-transform">
         <!-- ЗДЕСЬ ваш SVG-план -->
-        <svg viewBox="0 0 3614 1785" preserveAspectRatio="xMidYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 3614 1785" preserveAspectRatio="xMidYMin meet" fill="none" xmlns="http://www.w3.org/2000/svg">
           <g id="mapGroup">
             <rect width="3614" height="1785" fill="none"/>
             <path d="M394 1118.5V1141H499V1617H250V1141H331V1118.5H250V1074H230V1647H1573V1425V1326H1614V1298V1136.5H1334V1080H1273V1119H1185V1141H1273V1617H519V1141H624V1118.5H394Z" stroke="#132029" stroke-opacity="0.55"/>
@@ -623,9 +633,31 @@ function clampTransform(){
 }
 
 function initView(){
+  // Сначала считаем «естественный» fit (scale=1) — SVG сам вписывает карту
+  // по ширине ИЛИ высоте (что упрётся первым). Если пропорции экрана сильно
+  // отличаются от пропорций здания (например, узкий телефон vs широкое
+  // здание), по второй оси остаётся много пустого места.
+  // Чтобы карта не выглядела "точкой в пустоте", подбираем масштаб так,
+  // чтобы более "пустая" ось тоже была заполнена на fillRatio.
   scale = 1;
-  tx = 0;
-  ty = 0;
+  const rect = svgEl.getBoundingClientRect();
+  const scaleFactors = svgScaleFactors();
+  const visibleW = rect.width / scaleFactors.x;
+  const visibleH = rect.height / scaleFactors.y;
+  const fillRatio = 0.85;
+  const neededForW = (visibleW * fillRatio) / BASE_W;
+  const neededForH = (visibleH * fillRatio) / BASE_H;
+  // Берём БОЛЬШИЙ из двух — это масштаб, который подтягивает ту ось,
+  // где сейчас больше всего пустого места. На мобильных экранах это
+  // может быть меньше 1, чтобы карта не была сдвинута вниз за пределы.
+  scale = clampScale(Math.max(neededForW, neededForH));
+  // Если по какой-то оси карта не помещается целиком — центрируем
+  // стартовый вид на точке входа, а не на левом верхнем углу здания.
+  const isTallScreen = visibleH / visibleW > (BASE_H / BASE_W) * 1.05;
+  const focusX = BASE_W / 2;
+  const focusY = isTallScreen ? BASE_H / 2 : ((typeof ENTRANCE !== 'undefined' && ENTRANCE.y != null) ? ENTRANCE.y : BASE_H / 2);
+  tx = visibleW/2 - focusX*scale;
+  ty = visibleH/2 - focusY*scale;
   applyTransform();
 }
 function resetView(){ initView(); }
@@ -659,7 +691,7 @@ function zoomBy(factor, clientX, clientY){
   applyTransform();
 }
 
-const PAN_SPEED = 1.2; // 1 = нормальная скорость, <1 медленнее, >1 быстрее
+const PAN_SPEED = 1.8; // 1 = нормальная скорость, <1 медленнее, >1 быстрее
 
 // pointer-based pan + распознавание тапа по кабинету
 let dragging=false, lastX=0, lastY=0, downX=0, downY=0, moved=false, pinching=false;
@@ -762,6 +794,10 @@ function centerOnRoom(id){
 }
 
 window.addEventListener('resize', initView);
+window.addEventListener('orientationchange', initView);
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', initView);
+}
 window.addEventListener('load', initView);
 initView();
 </script>
