@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Путеводитель по зданию</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #f0f4f8;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 { color: #2c3e50; margin-bottom: 10px; }
+
+    .map-wrapper {
+      width: 100%;
+      max-width: 1400px;
+      background: white;
+      padding: 15px;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+
+    /* Стили для комнат (ваши серые фигуры) */
+    .room {
+      fill: #e3f2fd; /* Меняем дефолтный серый на приятный голубой */
+      stroke: #aecbfa;
+      stroke-width: 2px;
+      opacity: 0.6; /* Делаем чуть заметнее */
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    /* Эффект наведения на комнату */
+    .room:hover {
+      fill: #1a73e8;
+      opacity: 0.9;
+      filter: drop-shadow(0 4px 12px rgba(26,115,232,0.4));
+    }
+
+    /* Активное/выбранное помещение */
+    .room.selected {
+      fill: #34a853 !important;
+      opacity: 1;
+    }
+
+    /* Стили для названий кабинетов */
+    .room-label {
+      font-size: 32px; /* Координаты SVG огромные (3614px), поэтому шрифт крупный */
+      font-weight: 700;
+      fill: #1967d2;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      pointer-events: none; /* Чтобы текст не мешал кликать по комнате */
+      transition: fill 0.25s;
+    }
+    
+    /* Цвет текста, когда мы навели на комнату */
+    .room:hover + .room-label, 
+    .room.selected + .room-label {
+      fill: white;
+    }
+
+    /* Информационная панель внизу */
+    #info-panel {
+      margin-top: 20px;
+      padding: 15px 30px;
+      background: #2c3e50;
+      color: white;
+      border-radius: 8px;
+      font-size: 18px;
+      min-width: 300px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Интерактивный план этажа</h1>
+  
+  <div class="map-wrapper">
+    <!-- Ваш SVG с добавленными классами "room" и уникальными id -->
+    <svg width="100%" height="100%" viewBox="0 0 3614 1785" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="3614" height="1785" fill="white"/>
+      
+      <!-- Контуры стен здания -->
+      <path d="M394 1118.5V1141H499V1617H250V1141H331V1118.5H250V1074H230V1647H1573V1425V1326H1614V1298V1136.5H1334V1080H1273V1119H1185V1141H1273V1617H519V1141H624V1118.5H394Z" stroke="black"/>
+      <path d="M250 980.5H230V550.5H1303.5V179.5H3493.5V761H3473.5V212.5H2402.5V673H2515V770.5H2501.5V688.5H2379V212.5H2137V608H2125.5V212.5H1873V608H1859V212.5H1609V608H1586.5V212.5H1334V999.5H1270.5V946H1231.5V935H1270.5V576.5H1031V935H1192.5V946H973.5V935H1019.5V576.5H899.5V935H937V946H840V935H885.5V576.5H762.5V935H805V946H710.5V935H750V576.5H638.5V935H676V946H585.5V935H630L628 576.5H508V937H546.5V946H391V935H498V576.5H250V935H331V946H250V980.5Z" stroke="black"/>
+      <path d="M1839.5 915.5V1326H3493.5V846H3473.5V882.5H3225.5H3210.5V916H3139V924.5H3225.5V899H3473.5V1298H2777.5V924.5H3104.5V916H2515V852H2501.5V916H2482.5V924.5H2762.5V1298H2411V924.5H2432V916H2192.5V924.5H2365V1298H1854.5V924.5H1889V915.5H1839.5Z" stroke="black"/>
+      <path d="M1767 1326H1685.5V1298H1767V1326Z" stroke="black"/>
+      <path d="M1767 1146.5H1685.5V1136.5H1767V1146.5Z" stroke="black"/>
+      <path d="M1111.5 1141H681V1118.5L1111.5 1119V1141Z" stroke="black"/>
+      <path d="M1935.5 915.5V924.5H2149.5V915.5H1935.5Z" stroke="black"/>
+
+      <!-- ИНТЕРАКТИВНЫЕ КОМНАТЫ (Ваши фигуры, превращенные в путеводитель) -->
+
+      <path id="room-100" class="room" opacity="0.2" d="M1335 608H2376.5V690H2502.5V913H1839.5V1135H1335V608Z" fill="#D9D9D9"/>
+      <rect id="room-101" class="room" opacity="0.2" x="249" y="1141" width="250" height="476" fill="#D9D9D9"/>
+      <rect id="room-102" class="room" opacity="0.2" x="518" y="1141" width="756" height="476" fill="#D9D9D9"/>
+      <rect id="room-103" class="room" opacity="0.2" x="251" y="576" width="246" height="358" fill="#D9D9D9"/>
+      <rect id="room-104" class="room" opacity="0.2" x="508" y="576" width="124" height="358" fill="#D9D9D9"/>
+      <rect id="room-105" class="room" opacity="0.2" x="638" y="575" width="113" height="359" fill="#D9D9D9"/>
+      <rect id="room-106" class="room" opacity="0.2" x="762" y="576" width="123" height="358" fill="#D9D9D9"/>
+      <rect id="room-107" class="room" opacity="0.2" x="900" y="575" width="120" height="359" fill="#D9D9D9"/>
+      <rect id="room-108" class="room" opacity="0.2" x="1031" y="576" width="239" height="358" fill="#D9D9D9"/>
+      <rect id="room-109" class="room" opacity="0.2" x="1609" y="213" width="248" height="397" fill="#D9D9D9"/>
+      <rect id="room-110" class="room" opacity="0.2" x="1873" y="212" width="253" height="398" fill="#D9D9D9"/>
+      <rect id="room-111" class="room" opacity="0.2" x="2136" y="211" width="243" height="399" fill="#D9D9D9"/>
+      <path id="room-112" class="room" opacity="0.2" d="M3473 212V875.5H3208V909.5H2517.5V671.5H2405V557V411L2402 212H3473Z" fill="#D9D9D9"/>
+      <path id="room-113" class="room" opacity="0.2" d="M2778 924H3226V900.5H3473V1297H2778V924Z" fill="#D9D9D9"/>
+      <rect id="room-114" class="room" opacity="0.2" x="2415" y="924" width="342" height="373" fill="#D9D9D9"/>
+      <rect id="room-115" class="room" opacity="0.2" x="1856" y="925" width="509" height="372" fill="#D9D9D9"/>
+
+
+      
+    </svg>
+  </div>
+
+  <div id="info-panel">Кликните на любую комнату на карте</div>
+
+  <script>
+    const infoPanel = document.getElementById('info-panel');
+    const rooms = document.querySelectorAll('.room');
+
+    rooms.forEach(room => {
+      // 1. АВТОМАТИЧЕСКИЙ РАСЧЕТ ЦЕНТРА И ДОБАВЛЕНИЕ ТЕКСТА
+      const bbox = room.getBBox();
+      const centerX = bbox.x + bbox.width / 2;
+      const centerY = bbox.y + bbox.height / 2;
+
+      // Создаем SVG элемент для текста
+      const textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      textNode.setAttribute("x", centerX);
+      textNode.setAttribute("y", centerY);
+      textNode.setAttribute("class", "room-label");
+      
+      // Берем имя из data-name, если его нет — пишем ID
+      textNode.textContent = room.getAttribute('data-name') || room.id;
+
+      // Вставляем текст в SVG сразу после текущей комнаты
+      room.parentNode.insertBefore(textNode, room.nextSibling);
+
+      // 2. ОБРАБОТКА КЛИКОВ
+      room.addEventListener('click', function() {
+        // Снимаем выделение с других комнат
+        rooms.forEach(r => r.classList.remove('selected'));
+        
+        // Выделяем текущую
+        this.classList.add('selected');
+        
+        // Выводим инфо
+        const roomName = this.getAttribute('data-name');
+        infoPanel.innerHTML = `Вы выбрали: <strong>${roomName}</strong> (ID: ${this.id})`;
+      });
+    });
+  </script>
+</body>
+</html>
