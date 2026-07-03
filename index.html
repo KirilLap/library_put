@@ -83,11 +83,22 @@
   .map-canvas{
     flex:1; position:relative; overflow:hidden; background:var(--paper);
     touch-action:none;
+    user-select:none;
+    -webkit-user-select:none;
+    -ms-user-select:none;
+    cursor:grab;
+  }
+  .map-canvas.dragging{ cursor:grabbing; }
+  .map-canvas, .map-canvas *, .map-transform, .map-transform *{
+    user-select:none;
+    -webkit-user-select:none;
+    -ms-user-select:none;
   }
   .map-transform{
-    position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform;
+    position:absolute; inset:0; transform-origin:0 0; will-change:transform;
+    width:100%; height:100%;
   }
-  .map-transform svg{ display:block; width:1100px; height:auto; }
+  .map-transform svg{ display:block; width:100%; height:100%; max-width:none; }
 
   .room{ fill:var(--room-fill); stroke:var(--room-stroke); stroke-width:2px; opacity:.85; cursor:pointer; transition:fill .2s, opacity .2s; }
   .room:hover{ fill:#AFCEDD; }
@@ -225,7 +236,7 @@
     <div class="map-canvas" id="map-canvas">
       <div class="map-transform" id="map-transform">
         <!-- ЗДЕСЬ ваш SVG-план -->
-        <svg viewBox="0 0 3614 1785" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 3614 1785" preserveAspectRatio="xMidYMid slice" fill="none" xmlns="http://www.w3.org/2000/svg">
           <g id="mapGroup">
             <rect width="3614" height="1785" fill="none"/>
             <path d="M394 1118.5V1141H499V1617H250V1141H331V1118.5H250V1074H230V1647H1573V1425V1326H1614V1298V1136.5H1334V1080H1273V1119H1185V1141H1273V1617H519V1141H624V1118.5H394Z" stroke="#132029" stroke-opacity="0.55"/>
@@ -572,8 +583,8 @@ function renderList(){
 const canvas = document.getElementById('map-canvas');
 const transformEl = document.getElementById('mapGroup');
 let scale = 1, tx = 0, ty = 0;
-const BASE_W = 1100; // ширина svg в css-пикселях при scale=1 (см. .map-transform svg)
-const VB_W = 3614;
+const BASE_W = 3614; // ширина SVG viewBox
+const BASE_H = 1785; // высота SVG viewBox
 
 function applyTransform(){
   transformEl.setAttribute('transform', `translate(${tx}, ${ty}) scale(${scale})`);
@@ -581,10 +592,9 @@ function applyTransform(){
 function clampScale(s){ return Math.min(4, Math.max(0.4, s)); }
 
 function initView(){
-  const rect = canvas.getBoundingClientRect();
-  scale = clampScale(rect.width / BASE_W * 1.6);
-  tx = (rect.width - BASE_W*scale)/2;
-  ty = 20;
+  scale = 1;
+  tx = 0;
+  ty = 0;
   applyTransform();
 }
 function resetView(){ initView(); }
@@ -605,13 +615,16 @@ let dragging=false, lastX=0, lastY=0, downX=0, downY=0, moved=false;
 const TAP_THRESHOLD = 8; // px — если сдвиг меньше, считаем это тапом, а не перетаскиванием
 
 canvas.addEventListener('pointerdown', e=>{
+  e.preventDefault();
   dragging=true; moved=false;
+  canvas.classList.add('dragging');
   lastX=e.clientX; lastY=e.clientY;
   downX=e.clientX; downY=e.clientY;
   canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', e=>{
   if(!dragging) return;
+  e.preventDefault();
   if(Math.hypot(e.clientX-downX, e.clientY-downY) > TAP_THRESHOLD) moved = true;
   tx += e.clientX-lastX; ty += e.clientY-lastY;
   lastX=e.clientX; lastY=e.clientY;
@@ -619,11 +632,17 @@ canvas.addEventListener('pointermove', e=>{
 });
 canvas.addEventListener('pointerup', e=>{
   dragging=false;
+  canvas.classList.remove('dragging');
+  canvas.releasePointerCapture(e.pointerId);
   if(!moved){
     handleTap(e.clientX, e.clientY);
   }
 });
-canvas.addEventListener('pointercancel', ()=>dragging=false);
+canvas.addEventListener('pointercancel', e=>{
+  dragging=false;
+  canvas.classList.remove('dragging');
+  if (e.pointerId) canvas.releasePointerCapture(e.pointerId);
+});
 
 function handleTap(clientX, clientY){
   const el = document.elementFromPoint(clientX, clientY);
@@ -668,10 +687,8 @@ function centerOnRoom(id){
   const rect = canvas.getBoundingClientRect();
   const c = centers[id];
   scale = clampScale(2.1);
-  const pxX = c.x/VB_W*BASE_W, pxY = c.x ? c.y/VB_W*BASE_W : 0;
-  const pxYreal = c.y/VB_W*BASE_W;
-  tx = rect.width/2 - pxX*scale;
-  ty = rect.height/2 - pxYreal*scale;
+  tx = rect.width/2 - c.x * scale;
+  ty = rect.height/2 - c.y * scale;
   applyTransform();
 }
 
